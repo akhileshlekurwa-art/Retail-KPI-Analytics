@@ -1,0 +1,6 @@
+{
+  "name": "Retail KPI & Visual Analytics",
+  "description": "An interactive full-stack business dashboard that converts retail CSV/XLSX spreadsheets into dynamic KPIs, charts, and AI-driven executive insights.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
