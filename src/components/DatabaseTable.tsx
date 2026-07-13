@@ -4,12 +4,13 @@ import { RetailRecord } from "../types";
 
 interface DatabaseTableProps {
   data: RetailRecord[];
+  isIndian?: boolean;
 }
 
 type SortField = "transactionId" | "date" | "store" | "region" | "netSales";
 type SortOrder = "asc" | "desc";
 
-export default function DatabaseTable({ data }: DatabaseTableProps) {
+export default function DatabaseTable({ data, isIndian }: DatabaseTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -87,11 +88,11 @@ export default function DatabaseTable({ data }: DatabaseTableProps) {
       "City",
       "Store Format",
       "Category",
-      "Gross Sales ($)",
-      "Discount ($)",
-      "Returns ($)",
-      "Net Sales ($)",
-      "Target Sales ($)",
+      isIndian ? "Gross Sales (₹)" : "Gross Sales ($)",
+      isIndian ? "Discount (₹)" : "Discount ($)",
+      isIndian ? "Returns (₹)" : "Returns ($)",
+      isIndian ? "Net Sales (₹)" : "Net Sales ($)",
+      isIndian ? "Target Sales (₹)" : "Target Sales ($)",
       "Stock Level",
       "Reorder Point"
     ];
@@ -283,7 +284,7 @@ export default function DatabaseTable({ data }: DatabaseTableProps) {
 
                     {/* Net Sales */}
                     <td className="py-2.5 px-4 font-bold text-slate-900 text-right font-mono">
-                      ${row.netSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {isIndian ? "₹" : "$"}{row.netSales.toLocaleString(isIndian ? "en-IN" : undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   </tr>
                 );

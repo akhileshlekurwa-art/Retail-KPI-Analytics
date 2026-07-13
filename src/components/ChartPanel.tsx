@@ -20,9 +20,10 @@ import { RetailRecord } from "../types";
 
 interface ChartPanelProps {
   filteredData: RetailRecord[];
+  isIndian?: boolean;
 }
 
-export default function ChartPanel({ filteredData }: ChartPanelProps) {
+export default function ChartPanel({ filteredData, isIndian }: ChartPanelProps) {
   // 1. Weekly Trend (Weekly Net Sales vs Targets)
   const getWeeklyTrend = () => {
     const weeklyMap: Record<string, { week: string; Sales: number; Target: number }> = {};
@@ -92,6 +93,12 @@ export default function ChartPanel({ filteredData }: ChartPanelProps) {
   };
 
   const formatCurrencyLabel = (value: number) => {
+    if (isIndian) {
+      if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`;
+      if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
+      if (value >= 1000) return `₹${(value / 1000).toFixed(0)}k`;
+      return `₹${value}`;
+    }
     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
     if (value >= 1000) return `$${(value / 1000).toFixed(0)}k`;
     return `$${value}`;
@@ -99,7 +106,14 @@ export default function ChartPanel({ filteredData }: ChartPanelProps) {
 
   const customTooltipFormatter = (value: any) => {
     if (typeof value === "number") {
-      return [new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value), undefined];
+      return [
+        new Intl.NumberFormat(isIndian ? "en-IN" : "en-US", {
+          style: "currency",
+          currency: isIndian ? "INR" : "USD",
+          maximumFractionDigits: 0
+        }).format(value),
+        undefined
+      ];
     }
     return [value, undefined];
   };

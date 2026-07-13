@@ -1,16 +1,17 @@
 import React from "react";
-import { DollarSign, Percent, TrendingUp, RefreshCw, ShoppingCart, Target } from "lucide-react";
+import { DollarSign, IndianRupee, Percent, TrendingUp, RefreshCw, ShoppingCart, Target } from "lucide-react";
 import { KPIStats } from "../types";
 
 interface KPICardsProps {
   stats: KPIStats;
+  isIndian?: boolean;
 }
 
-export default function KPICards({ stats }: KPICardsProps) {
+export default function KPICards({ stats, isIndian }: KPICardsProps) {
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat(isIndian ? "en-IN" : "en-US", {
       style: "currency",
-      currency: "USD",
+      currency: isIndian ? "INR" : "USD",
       maximumFractionDigits: 0
     }).format(val);
   };
@@ -24,7 +25,7 @@ export default function KPICards({ stats }: KPICardsProps) {
       title: "Net Sales",
       value: formatCurrency(stats.netSales),
       subtitle: `Gross: ${formatCurrency(stats.grossSales)}`,
-      icon: DollarSign,
+      icon: isIndian ? IndianRupee : DollarSign,
       color: "blue",
       badge: "Total Revenue"
     },

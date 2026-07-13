@@ -373,7 +373,7 @@ app.post(
 // Generate Business Insights using Gemini API
 app.post("/api/insights", async (req, res) => {
   try {
-    const { kpi, filteredData, activeFilters } = req.body;
+    const { kpi, filteredData, activeFilters, isIndian } = req.body;
     
     // Create prompt with summary details
     const geminiKey = process.env.GEMINI_API_KEY;
@@ -460,8 +460,10 @@ app.post("/api/insights", async (req, res) => {
       }
     });
 
+    const currencyWord = isIndian ? "Indian Rupees (INR, ₹) - formatting figures beautifully using the standard Indian numbering layout (Lakhs / Crores if applicable)" : "US Dollars (USD, $)";
+
     const prompt = `
-      As an expert retail analyst and executive business advisor, analyze this retail transaction and KPI dataset to generate deep, action-oriented, data-backed retail business insights.
+      As an expert retail analyst and executive business advisor, analyze this retail transaction and KPI dataset to generate deep, action-oriented, data-backed retail business insights. The financial figures are in ${currencyWord}. Make sure your written numbers and symbols represent this currency.
       
       Here is the aggregated data and summary of active filters:
       ${JSON.stringify(analysisPayload, null, 2)}
@@ -574,9 +576,27 @@ async function startServer() {
     });
   }
 
+  // Global Express Error-handling Middleware (MUST be last)
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error("Global Express unhandled error:", err);
+    res.status(err.status || err.statusCode || 500).json({
+      success: false,
+      error: err.message || "An unexpected internal server error occurred on the server."
+    });
+  });
+
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
+
+// Global Process Exception Handlers to prevent node crash
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("UNHANDLED REJECTION AT:", promise, "REASON:", reason);
+});
 
 startServer();

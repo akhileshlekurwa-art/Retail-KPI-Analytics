@@ -10,6 +10,7 @@ import { FilterState, KPIStats, RetailRecord } from "./types";
 
 export default function App() {
   const [data, setData] = useState<RetailRecord[]>([]);
+  const [customDatasetName, setCustomDatasetName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,16 +27,40 @@ export default function App() {
   // Tab state: "overview" | "charts" | "ledger" | "sources"
   const [activeTab, setActiveTab] = useState<"overview" | "charts" | "ledger" | "sources">("overview");
 
-  // Automatically load demo retail data on mount to ensure a fully populated premium landing experience
+  // Load from localStorage or fetch demo data on mount
   useEffect(() => {
-    const loadDemoOnMount = async () => {
+    const loadDataOnMount = async () => {
       setLoading(true);
       setError(null);
+
+      // Check for user-uploaded data in local storage
+      const storedData = localStorage.getItem("aura_retail_data");
+      const storedName = localStorage.getItem("aura_retail_dataset_name");
+
+      if (storedData) {
+        try {
+          const parsed = JSON.parse(storedData);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log("Restoring active user-uploaded dataset:", storedName);
+            setData(parsed);
+            setCustomDatasetName(storedName || "User Uploaded Dataset");
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to parse stored retail data from localStorage. Clearing stale entries...", e);
+          localStorage.removeItem("aura_retail_data");
+          localStorage.removeItem("aura_retail_dataset_name");
+        }
+      }
+
+      // Fallback to fetch demo data
       try {
         const response = await fetch("/api/sample-data");
         const result = await response.json();
         if (result.success) {
           setData(result.data);
+          setCustomDatasetName(null);
         } else {
           setError(result.error || "Failed to load mock retail database.");
         }
@@ -45,8 +70,38 @@ export default function App() {
         setLoading(false);
       }
     };
-    loadDemoOnMount();
+    loadDataOnMount();
   }, []);
+
+  // Reset local storage back to standard demo dataset
+  const handleResetToDemo = async () => {
+    setLoading(true);
+    setError(null);
+    localStorage.removeItem("aura_retail_data");
+    localStorage.removeItem("aura_retail_dataset_name");
+    setCustomDatasetName(null);
+    setFilters({
+      week: [],
+      region: [],
+      store: [],
+      city: [],
+      storeFormat: [],
+      category: []
+    });
+    try {
+      const response = await fetch("/api/sample-data");
+      const result = await response.json();
+      if (result.success) {
+        setData(result.data);
+      } else {
+        setError("Failed to reload demo retail database.");
+      }
+    } catch (e) {
+      setError("Error reloading demo retail database.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Compute filtered dataset
   const filteredData = useMemo(() => {
@@ -103,8 +158,39 @@ export default function App() {
     };
   }, [filteredData]);
 
-  const handleDataLoaded = (loadedData: RetailRecord[]) => {
+  // Compute if dataset contains Indian stores for native regional currency and number formatting
+  const isIndianDataset = useMemo(() => {
+    const indianKeywords = [
+      "mumbai", "delhi", "bangalore", "bengaluru", "chennai", "kolkata", "hyderabad", "pune", "ahmedabad", 
+      "jaipur", "lucknow", "chandigarh", "kochi", "patna", "bhopal", "indore", "surat", "nagpur", "coimbatore",
+      "visakhapatnam", "trivandrum", "bhubaneswar", "guwahati", "goa", "noida", "gurugram", "india"
+    ];
+    return data.some(r => {
+      const cityLower = (r.city || "").toLowerCase();
+      const regionLower = (r.region || "").toLowerCase();
+      const storeLower = (r.store || "").toLowerCase();
+      return indianKeywords.some(keyword => 
+        cityLower.includes(keyword) || regionLower.includes(keyword) || storeLower.includes(keyword)
+      );
+    });
+  }, [data]);
+
+  const handleDataLoaded = (loadedData: RetailRecord[], filename?: string) => {
     setData(loadedData);
+    if (filename) {
+      setCustomDatasetName(filename);
+      try {
+        localStorage.setItem("aura_retail_data", JSON.stringify(loadedData));
+        localStorage.setItem("aura_retail_dataset_name", filename);
+      } catch (e) {
+        console.warn("Could not save dataset to localStorage (might exceed quota limit):", e);
+      }
+    } else {
+      setCustomDatasetName(null);
+      localStorage.removeItem("aura_retail_data");
+      localStorage.removeItem("aura_retail_dataset_name");
+    }
+    
     // Reset filters on fresh file upload to prevent lockouts
     setFilters({
       week: [],
@@ -138,10 +224,30 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-1.5 text-[10px] text-slate-500 font-semibold bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
-              {data.length > 0 ? `${data.length} Transactions` : "Awaiting Data"}
+          <div className="flex items-center gap-3">
+            {customDatasetName ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded font-semibold flex items-center gap-1.5 shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+                  Active Data: <span className="font-bold max-w-[150px] truncate">{customDatasetName}</span>
+                </span>
+                <button
+                  onClick={handleResetToDemo}
+                  className="text-[9px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded px-2 py-1 transition-colors cursor-pointer uppercase tracking-tight"
+                  title="Clear uploaded files and reload original demo database"
+                >
+                  Reset to Demo
+                </button>
+              </div>
+            ) : (
+              <span className="text-[10px] text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded font-semibold flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block"></span>
+                Active Data: <span className="font-bold">Demo Retail Database</span>
+              </span>
+            )}
+
+            <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-slate-500 font-semibold bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
+              {data.length > 0 ? `${data.length} Records` : "Awaiting Data"}
             </div>
           </div>
         </div>
@@ -267,13 +373,14 @@ export default function App() {
                 {activeTab === "overview" && (
                   <div className="space-y-4 animate-fade-in" id="panel-overview">
                     {/* KPI metrics cards row */}
-                    <KPICards stats={stats} />
+                    <KPICards stats={stats} isIndian={isIndianDataset} />
 
                     {/* Gemini AI Strategic Insight Panel */}
                     <InsightPanel
                       filteredData={filteredData}
                       stats={stats}
                       activeFilters={filters}
+                      isIndian={isIndianDataset}
                     />
                   </div>
                 )}
@@ -281,14 +388,14 @@ export default function App() {
                 {activeTab === "charts" && (
                   <div className="animate-fade-in" id="panel-charts">
                     {/* Rich Recharts Panel */}
-                    <ChartPanel filteredData={filteredData} />
+                    <ChartPanel filteredData={filteredData} isIndian={isIndianDataset} />
                   </div>
                 )}
 
                 {activeTab === "ledger" && (
                   <div className="animate-fade-in" id="panel-ledger">
                     {/* Joined database ledger view */}
-                    <DatabaseTable data={filteredData} />
+                    <DatabaseTable data={filteredData} isIndian={isIndianDataset} />
                   </div>
                 )}
 

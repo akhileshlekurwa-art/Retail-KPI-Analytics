@@ -1,0 +1,7 @@
+Transaction ID,Date,Week,Store,Product Category,Gross Sales,Discount Amount,Return Amount,Target Sales,Stock Level,Reorder Point
+TX5001,2026-06-01,W23,NY Metro,Electronics,850,50,0,350,45,15
+TX5002,2026-06-02,W23,NY Metro,Apparel,120,20,15,350,8,10
+TX5003,2026-06-03,W23,LA Central,Electronics,1200,150,100,500,12,15
+TX5004,2026-06-04,W23,SF Plaza,Groceries,45,0,0,250,90,30
+TX5005,2026-06-05,W23,Chicago Loop,Apparel,280,45,45,300,50,20
+TX5006,2026-06-06,W23,Houston Galleria,Home & Kitchen,350,30,0,400,25,20

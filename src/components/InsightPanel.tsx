@@ -6,9 +6,10 @@ interface InsightPanelProps {
   filteredData: RetailRecord[];
   stats: KPIStats;
   activeFilters: FilterState;
+  isIndian?: boolean;
 }
 
-export default function InsightPanel({ filteredData, stats, activeFilters }: InsightPanelProps) {
+export default function InsightPanel({ filteredData, stats, activeFilters, isIndian }: InsightPanelProps) {
   const [insights, setInsights] = useState<BusinessInsights | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,16 +136,24 @@ export default function InsightPanel({ filteredData, stats, activeFilters }: Ins
     
     const filterContext = activeFilterNames ? `with active filters applied for ${activeFilterNames}` : "across all operating regions";
     
+    const formatValue = (val: number) => {
+      return new Intl.NumberFormat(isIndian ? "en-IN" : "en-US", {
+        style: "currency",
+        currency: isIndian ? "INR" : "USD",
+        maximumFractionDigits: 0
+      }).format(val);
+    };
+
     const achievementDesc = stats.targetAchievement >= 100 
       ? `exceeded aggregate sales goals at **${stats.targetAchievement.toFixed(1)}%** achievement` 
-      : `reached **${stats.targetAchievement.toFixed(1)}%** of the targeted target sales, indicating a deficit of **${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(stats.targetSales - stats.netSales)}**`;
+      : `reached **${stats.targetAchievement.toFixed(1)}%** of the targeted target sales, indicating a deficit of **${formatValue(stats.targetSales - stats.netSales)}**`;
 
     const executiveSummary = `
       ### Business Health Analysis
-      The retail segment has generated total Net Sales of **${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(stats.netSales)}** ${filterContext}. Performance analysis shows that we have ${achievementDesc}. The Average Transaction Value (ATV) is stabilizing at **${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(stats.averageTransactionValue)}** per basket.
+      The retail segment has generated total Net Sales of **${formatValue(stats.netSales)}** ${filterContext}. Performance analysis shows that we have ${achievementDesc}. The Average Transaction Value (ATV) is stabilizing at **${formatValue(stats.averageTransactionValue)}** per basket.
       
       ### Operational Hotspots
-      The **${bestReg.name}** region is leading performance with **${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(bestReg.sales)}** in net sales. However, return burdens require active mitigation, specifically in categories like **${highReturnCategories[0]?.category || "Apparel"}** which exhibits return Rates of **${highReturnCategories[0]?.returnRate.toFixed(1) || 0}%**.
+      The **${bestReg.name}** region is leading performance with **${formatValue(bestReg.sales)}** in net sales. However, return burdens require active mitigation, specifically in categories like **${highReturnCategories[0]?.category || "Apparel"}** which exhibits return Rates of **${highReturnCategories[0]?.returnRate.toFixed(1) || 0}%**.
     `;
 
     const actionItems = [
@@ -182,7 +191,8 @@ export default function InsightPanel({ filteredData, stats, activeFilters }: Ins
         body: JSON.stringify({
           kpi: stats,
           filteredData: filteredData.slice(0, 350), // prevent payload bloating
-          activeFilters
+          activeFilters,
+          isIndian
         })
       });
 
@@ -223,9 +233,9 @@ export default function InsightPanel({ filteredData, stats, activeFilters }: Ins
   }
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat(isIndian ? "en-IN" : "en-US", {
       style: "currency",
-      currency: "USD",
+      currency: isIndian ? "INR" : "USD",
       maximumFractionDigits: 0
     }).format(val);
   };
